@@ -2,9 +2,10 @@
 # then unzip the file for a specified amount of time before cleaning it out
 
 #import python libraries
-import subprocess, os, optparse, sys,time
+import subprocess, os, optparse, sys, time, shutil
 import datetime
 import os.path
+import re
 
 #import pip libraries
 
@@ -17,39 +18,55 @@ class Folder:
 		self.creationTime =  time.ctime(stat.st_ctime)#set the path variable to the provided string
 		#self.createTime = creationTime #get the ctime of the folder
 
-def crawl(folderPath, hoursOld):
+def moveFile(destinationPath, srcName):
+	""" Used to move the file to a destination """
+	print 'The destination path is {0} the file to be copied is {1}'.format(destinationPath, srcName)
+	#Copy source file to destination path
+	shutil.copy2(srcName, destinationPath)
+
+def crawl(folderPath, destinationPath, hoursOld):
 	"""This function will be used to crawl the source path and do a logic check on files within the crawl.  The criteria to pass is two fold:
 	1) It must be a 7zip file
 	2) It must be newer then the hoursOld number """
 	#set the ONEHOUR var as the global
 	global ONEHOUR
+	#Regular expression to find 7zip files .*\.7z$
+	extenMatch = re.compile('.*\.7z$')
 
 	#create the hourse old in EPOCH time
 	hoursOld = time.time() - (ONEHOUR * hoursOld)
 
 	#check the value of hoursOld for sanity
 	#datetime.datetime.fromtimestamp(1347517370).strftime('%Y-%m-%d %H:%M:%S')
-	print 'epoch time = {0} minus hours old = {1}'.format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M.%S'), datetime.datetime.fromtimestamp(hoursOld).strftime('%Y-%m-%d %H:%M.%S'))
+	#print the current epoch time in human readable format
+	print '\nepoch time = {0} minus hours old = {1}\n'.format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M.%S'), datetime.datetime.fromtimestamp(hoursOld).strftime('%Y-%m-%d %H:%M.%S'))
 
 	# Set the directory you want to start from
 	#rootDir = folderPath
 	#hoursAgo = time.time() - (ONEHOUR * 2)
+	#Print the hours ago variable in human readable format
 	print 'Hours ago is : %s' % datetime.datetime.fromtimestamp(hoursOld).strftime('%Y-%m-%d %H:%M.%S')
+	#start the os.walk loop for the source path
 	for dirName, subdirList, fileList in os.walk(folderPath):
-	    print('Found directory: %s' % dirName)
+	    print'\nFound directory: %s' % dirName
 	    for fname in fileList:
 	    	fnameStats = os.stat(os.path.join(dirName, fname))
 	    	fnameAge=fnameStats.st_mtime
 
 	    	if fnameAge > hoursOld:
-	    		print 'the file is %s old' % fnameAge 
-	        	print('\tIs less than 2 hours old %s' % fname)
+	    		# print 'the file is %s old' % fnameAge 
+	      		#test the regex and move 7zip file if it passes
+	      		
+	      		if extenMatch.match(fname): #another possible way to match is with simple string function fname.endswith(".py")
+	      			moveFile(destinationPath, os.path.join(dirName, fname))
+	      		else:
+	      			print 'file %s is not a 7zip file' % fname
 
 if __name__ == "__main__":
 
 	#Create variables from the optparser
-	#print 'ARGV      :', sys.argv[1:]
 
+	#create variable from optparse object
 	parser = optparse.OptionParser(usage= '%prog -s <Source Folder Path> -d <Destination Folder Path> -t <hours back>') #Create the parser var plus provide some usage guidelins
 
 	#add source folder path option
@@ -62,7 +79,7 @@ if __name__ == "__main__":
 	parser.add_option('-d', '--dest', 
 	                  dest="destination_path",
 	                  default= os.getcwd(),
-	                  help="Provide the path of the folder you would like to send the matching files too"
+	                  help="Provide the path of the folder you would like to send the matching files too Default is current working directory"
 	                  )
 
 	#add hours back options
@@ -87,13 +104,12 @@ if __name__ == "__main__":
 	print 'Destination location: ', destinationPath
 	print 'Hours back to scan :', hoursOld
 
-	crawl(folderPath, hoursOld)
-	#folderStats = os.stat(folderPath)
-
-	# print 'os.stat(%s):' % folderStats
-	# print '\tSize:', folderStats.st_size
-	# print '\tPermissions:', oct(folderStats.st_mode)
-	# print '\tOwner:', folderStats.st_uid
-	# print '\tDevice:', folderStats.st_dev
-	# print '\tLast modified:', time.ctime(folderStats.st_mtime)
-	# print '\tCreation Date', time.ctime(folderStats.st_ctime)
+	#test that the input path is valid
+	if os.path.exists(folderPath):
+		#send the input variables to the crawl function
+		crawl(folderPath, destinationPath, hoursOld)
+	#If the source path fails the path validation then print a warning with the parser usage
+	else:
+		print 'source path does not exist please verify the input path'
+		print parser.usage
+		exit(0) #exit the script
