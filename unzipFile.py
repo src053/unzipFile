@@ -17,11 +17,28 @@ class Folder:
 	def __init__(self, stat):
 		self.creationTime =  time.ctime(stat.st_ctime)#set the path variable to the provided string
 		#self.createTime = creationTime #get the ctime of the folder
-def checkFolderExist(path):
-	pathToCheck = os.path.join(os.getcwd, path)
+def checkFolderExist(folderPath, hostDirName):
+	searchFor = str.split(hostDirName, '.')
+	storeFileNumber = []
+	print 'search for: ', searchFor
+	for dirName, subdirList, fileList in os.walk(folderPath):
+		for subDir in subdirList:
+			print 'Checking subdir: ', subDir
+			matchDirName= str.split(subDir, '.')
+			print 'Dir name after spliting on dot', matchDirName
+			if searchFor[0] == matchDirName[0]:
+				#print 'found a directory of the same name'
+				#return [True, matchDirName[2][-2:]]
+				print 'There is a MATCH'
+				storeFileNumber.append(int(matchDirName[2][-2:]))
+				print storeFileNumber
+	if sum(storeFileNumber) > 0:
+		storeFileNumber.sort()
+		highestFolderNumber = storeFileNumber.pop()
+		return [True, highestFolderNumber]
+	else:
+		return [False, 0]
 
-	if os.path.exists(pathToCheck):
-		directoryName = path
 
 def createHostNameFolder(folderPath, z7Name):
 	"""this function will create the hostname directory for source 7z file to be copied too"""
@@ -40,19 +57,28 @@ def createHostNameFolder(folderPath, z7Name):
 		with open(hostFileName, 'r') as f:
 			hostDirName = f.read()
 		#create destination folder
-		if not os.path.exists(os.path.join(folderPath, hostDirName)):
-			#call the unzip function to unzip the whole directory into the permanent folder
-			unzip(os.path.join(folderPath, z7Name), os.path.join(folderPath, hostDirName + "00"), True)
-			#remove the tempHostNameDir that was created
-			shutil.rmtree(tempHostNameDir)
+		#if not os.path.exists(os.path.join(folderPath, hostDirName + "00")):
+	folderExists, folderNumber = checkFolderExist(folderPath, hostDirName)
+	print 'folder Exists {0}, folder number {1}'.format(folderExists, folderNumber)
+	if not folderExists:
+		#call the unzip function to unzip the whole directory into the permanent folder
+		unzip(os.path.join(folderPath, z7Name), os.path.join(folderPath, hostDirName + "01"), True)
+
+	else:
+		folderNumber = int(folderNumber)
+		if folderNumber < 9:
+			folderNumber += 1
+			changeToString = "0" + str(folderNumber)
+			hostDirName = hostDirName + changeToString
+			unzip(os.path.join(folderPath, z7Name), os.path.join(folderPath, hostDirName), True)
 		else:
-			folderNumber = int(hostDirName[-2:])
-			if folderNumber < 10:
-				folderNumber += 1
-				changeToString = "0" + str(folderNumber)
-				hostDirName = hostDirName
-				print folderNumber
-				print type(folderNumber)
+			folderNumber += 1
+			changeToString = str(folderNumber)
+			hostDirName = hostDirName + changeToString
+			unzip(os.path.join(folderPath, z7Name), os.path.join(folderPath, hostDirName), True)	
+	#remove the tempHostNameDir that was created
+	shutil.rmtree(tempHostNameDir)
+	os.remove(os.path.join(folderPath, z7Name))		
 
 def moveFile(destinationPath, srcName):
 	""" Used to move the file to a destination """
