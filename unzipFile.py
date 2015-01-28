@@ -12,11 +12,7 @@ import re
 #Create global var
 ONEHOUR = 3600
 
-class Folder:
-	#used to pull all the relevant information from the folder path provided
-	def __init__(self, stat):
-		self.creationTime =  time.ctime(stat.st_ctime)#set the path variable to the provided string
-		#self.createTime = creationTime #get the ctime of the folder
+
 def checkFolderExist(folderPath, hostDirName):
 	searchFor = str.split(hostDirName, '.')
 	storeFileNumber = []
@@ -30,7 +26,7 @@ def checkFolderExist(folderPath, hostDirName):
 				#print 'found a directory of the same name'
 				#return [True, matchDirName[2][-2:]]
 				print 'There is a MATCH'
-				storeFileNumber.append(int(matchDirName[2][-2:]))
+				storeFileNumber.append(int(matchDirName[len(matchDirName) - 1][-2:]))
 				print storeFileNumber
 	if sum(storeFileNumber) > 0:
 		storeFileNumber.sort()
@@ -58,8 +54,9 @@ def createHostNameFolder(folderPath, z7Name):
 			hostDirName = f.read()
 		#create destination folder
 		#if not os.path.exists(os.path.join(folderPath, hostDirName + "00")):
-	folderExists, folderNumber = checkFolderExist(folderPath, hostDirName)
-	print 'folder Exists {0}, folder number {1}'.format(folderExists, folderNumber)
+
+	folderExists, folderNumber = checkFolderExist(folderPath, hostDirName) #run the checkFolderExist function and create variables with the output
+	#print 'folder Exists {0}, folder number {1}'.format(folderExists, folderNumber)
 	if not folderExists:
 		#call the unzip function to unzip the whole directory into the permanent folder
 		unzip(os.path.join(folderPath, z7Name), os.path.join(folderPath, hostDirName + "01"), True)
@@ -102,7 +99,7 @@ def crawl(folderPath, destinationPath, hoursOld):
 	#check the value of hoursOld for sanity
 	#datetime.datetime.fromtimestamp(1347517370).strftime('%Y-%m-%d %H:%M:%S')
 	#print the current epoch time in human readable format
-	print '\nepoch time = {0} minus hours old = {1}\n'.format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M.%S'), datetime.datetime.fromtimestamp(hoursOld).strftime('%Y-%m-%d %H:%M.%S'))
+	#print '\nepoch time = {0} minus hours old = {1}\n'.format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M.%S'), datetime.datetime.fromtimestamp(hoursOld).strftime('%Y-%m-%d %H:%M.%S'))
 
 	# Set the directory you want to start from
 	#rootDir = folderPath
@@ -111,21 +108,21 @@ def crawl(folderPath, destinationPath, hoursOld):
 	print 'Hours ago is : %s' % datetime.datetime.fromtimestamp(hoursOld).strftime('%Y-%m-%d %H:%M.%S')
 	#start the os.walk loop for the source path
 	for dirName, subdirList, fileList in os.walk(folderPath):
-	    print'\nFound directory: %s' % dirName
+	    print'\nFound directory: %s' % dirName #print the directory name
+	    #iterate over each file in the file list
 	    for fname in fileList:
-	    	fnameStats = os.stat(os.path.join(dirName, fname))
-	    	fnameAge=fnameStats.st_mtime
-
+	    	fnameStats = os.stat(os.path.join(dirName, fname)) #pull the file stats from the files in the directory
+	    	fnameAge=fnameStats.st_mtime #create a variable with the age of the file
+	    	#check if the file age is older than the time that was provided
 	    	if fnameAge > hoursOld:
 	    		# print 'the file is %s old' % fnameAge 
-	      		#test the regex and move 7zip file if it passes
-	      		
+	      		#test the regex and move 7zip file if it passes	      		
 	      		if extenMatch.match(fname): #another possible way to match is with simple string function fname.endswith(".7z")
-	      			moveFile(destinationPath, os.path.join(dirName, fname))
-	      			createHostNameFolder(destinationPath, fname)
-	      			#unzip(os.path.join(dirName, fname), destinationPath, True)
+	      			moveFile(destinationPath, os.path.join(dirName, fname)) #Move the file to the destination location
+	      			createHostNameFolder(destinationPath, fname) #create the final spot to unzip the files to
+
 	      		else:
-	      			print 'file %s is not a 7zip file' % fname
+	      			print 'file %s is not a 7zip file' % fname #keep record of files that are not 7zfiles
 
 def unzip(folderPath, destinationPath, hostInfo):
 	""" This function will call the 7z exe and unzip a compressed file"""
@@ -134,13 +131,13 @@ def unzip(folderPath, destinationPath, hostInfo):
 	#call the subprocess
 	#check if the machineInfo is already provided
 	if hostInfo:
-		print 'HOSTINFO =', hostInfo
-		print 'FOLDERPATH =', folderPath
-		subprocess.call(exeLocation + " x " + folderPath + " -o" + destinationPath)
+		print 'HOSTINFO =', hostInfo #print out the status of hostInfo True or False
+		print 'FOLDERPATH =', folderPath #print out the destination path
+		subprocess.call(exeLocation + " x " + folderPath + " -o" + destinationPath) #this will call the 7z.exe and extract the entire content
 	else:
-		print 'HOSTINFO =', hostInfo
-		print 'FOLDERPATH =', folderPath
-		subprocess.call(exeLocation + " e " + folderPath + " -o" + destinationPath + " hostname.txt -r")
+		print 'HOSTINFO =', hostInfo #print out the status of hostInfo True or False
+		print 'FOLDERPATH =', folderPath #print out the destination path
+		subprocess.call(exeLocation + " e " + folderPath + " -o" + destinationPath + " hostname.txt -r") #this will call the 7z.exe and extract only the hostname.txt
 
 if __name__ == "__main__":
 
